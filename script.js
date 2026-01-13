@@ -30,8 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // クリックでファイル選択
-    dropZone.addEventListener('click', () => {
+    // クリックでファイル選択（ラベル以外の部分をクリックした場合のみ）
+    dropZone.addEventListener('click', (e) => {
+        // ラベルやファイル入力からのクリックの場合は無視（二重起動防止）
+        if (e.target.closest('.file-label') || e.target === fileInput) {
+            return;
+        }
         fileInput.click();
     });
 
@@ -45,13 +49,25 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFile(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            originalImage.src = e.target.result;
-            originalImage.onload = () => {
+            // 新しいImageオブジェクトを作成して読み込みを確実に
+            const img = new Image();
+            img.onload = () => {
+                originalImage.src = img.src;
                 previewSection.style.display = 'block';
                 splitImage();
             };
+            img.onerror = () => {
+                alert('画像の読み込みに失敗しました。別の画像をお試しください。');
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = () => {
+            alert('ファイルの読み込みに失敗しました。');
         };
         reader.readAsDataURL(file);
+
+        // 同じファイルを再選択できるようにリセット
+        fileInput.value = '';
     }
 
     // 画像を縦4分割
@@ -115,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ia[i] = byteString.charCodeAt(i);
         }
         const blob = new Blob([ab], { type: mimeString });
-        
+
         // Blob URLを作成してダウンロード
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -123,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         link.download = filename;
         document.body.appendChild(link);
         link.click();
-        
+
         // ブラウザがファイルを取得する時間を確保してからメモリ解放
         setTimeout(() => {
             document.body.removeChild(link);
