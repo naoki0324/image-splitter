@@ -1,191 +1,142 @@
-// DOM Elements
-const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
-const uploadSection = document.getElementById('uploadSection');
-const previewSection = document.getElementById('previewSection');
-const resultSection = document.getElementById('resultSection');
-const originalImage = document.getElementById('originalImage');
-const splitBtn = document.getElementById('splitBtn');
-const resetBtn = document.getElementById('resetBtn');
-const downloadAllBtn = document.getElementById('downloadAllBtn');
-const splitGrid = document.getElementById('splitGrid');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+document.addEventListener('DOMContentLoaded', () => {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const previewSection = document.getElementById('previewSection');
+    const resultSection = document.getElementById('resultSection');
+    const originalImage = document.getElementById('originalImage');
+    const splitImages = document.getElementById('splitImages');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
 
-// State
-let currentImage = null;
-let splitImages = [];
+    let splitImageDataUrls = [];
 
-// ===== Event Listeners =====
-
-// Click to upload
-uploadArea.addEventListener('click', () => {
-    fileInput.click();
-});
-
-// File input change
-fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        handleFile(file);
-    }
-});
-
-// Drag and drop
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('dragover');
-});
-
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('dragover');
-});
-
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-        handleFile(file);
-    }
-});
-
-// Split button
-splitBtn.addEventListener('click', () => {
-    splitImage();
-});
-
-// Reset button
-resetBtn.addEventListener('click', () => {
-    resetApp();
-});
-
-// Download all button
-downloadAllBtn.addEventListener('click', () => {
-    downloadAll();
-});
-
-// ===== Functions =====
-
-function handleFile(file) {
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-            currentImage = img;
-            originalImage.src = e.target.result;
-
-            // Show preview section
-            uploadSection.classList.add('hidden');
-            previewSection.classList.remove('hidden');
-            previewSection.classList.add('fade-in');
-
-            // Hide result section if visible
-            resultSection.classList.add('hidden');
-            splitImages = [];
-        };
-        img.src = e.target.result;
-    };
-
-    reader.readAsDataURL(file);
-}
-
-function splitImage() {
-    if (!currentImage) return;
-
-    const width = currentImage.width;
-    const height = currentImage.height;
-    const splitHeight = Math.floor(height / 4);
-
-    splitImages = [];
-    splitGrid.innerHTML = '';
-
-    for (let i = 0; i < 4; i++) {
-        // Calculate crop dimensions (縦方向に分割)
-        const startY = i * splitHeight;
-        const cropHeight = (i === 3) ? (height - startY) : splitHeight; // Last piece gets remainder
-
-        // Set canvas size
-        canvas.width = width;
-        canvas.height = cropHeight;
-
-        // Clear and draw
-        ctx.clearRect(0, 0, width, cropHeight);
-        ctx.drawImage(
-            currentImage,
-            0, startY, width, cropHeight,  // Source
-            0, 0, width, cropHeight         // Destination
-        );
-
-        // Get data URL
-        const dataUrl = canvas.toDataURL('image/png');
-        splitImages.push(dataUrl);
-
-        // Create grid item
-        const item = document.createElement('div');
-        item.className = 'split-item fade-in';
-        item.style.animationDelay = `${i * 0.1}s`;
-
-        item.innerHTML = `
-            <div class="split-item-header">パート ${i + 1}</div>
-            <div class="split-item-image">
-                <img src="${dataUrl}" alt="パート ${i + 1}">
-            </div>
-            <div class="split-item-footer">
-                <button class="btn btn-download" onclick="downloadImage(${i})">
-                    📥 ダウンロード
-                </button>
-            </div>
-        `;
-
-        splitGrid.appendChild(item);
-    }
-
-    // Show result section
-    resultSection.classList.remove('hidden');
-    resultSection.classList.add('fade-in');
-
-    // Scroll to result
-    resultSection.scrollIntoView({ behavior: 'smooth' });
-}
-
-function downloadImage(index) {
-    if (!splitImages[index]) return;
-
-    const link = document.createElement('a');
-    link.download = `split_part_${index + 1}.png`;
-    link.href = splitImages[index];
-    link.click();
-}
-
-function downloadAll() {
-    splitImages.forEach((dataUrl, index) => {
-        setTimeout(() => {
-            const link = document.createElement('a');
-            link.download = `split_part_${index + 1}.png`;
-            link.href = dataUrl;
-            link.click();
-        }, index * 200); // Stagger downloads
+    // ドラッグ&ドロップイベント
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
     });
-}
 
-function resetApp() {
-    // Clear state
-    currentImage = null;
-    splitImages = [];
-    fileInput.value = '';
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
 
-    // Reset UI
-    uploadSection.classList.remove('hidden');
-    previewSection.classList.add('hidden');
-    resultSection.classList.add('hidden');
-    splitGrid.innerHTML = '';
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type.startsWith('image/')) {
+            handleFile(files[0]);
+        }
+    });
 
-    // Clear preview
-    originalImage.src = '';
-}
+    // クリックでファイル選択
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
 
-// Make downloadImage available globally for onclick
-window.downloadImage = downloadImage;
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    // ファイル処理
+    function handleFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            originalImage.src = e.target.result;
+            originalImage.onload = () => {
+                previewSection.style.display = 'block';
+                splitImage();
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 画像を縦4分割
+    function splitImage() {
+        const img = originalImage;
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        const partHeight = Math.floor(height / 4);
+
+        splitImages.innerHTML = '';
+        splitImageDataUrls = [];
+
+        for (let i = 0; i < 4; i++) {
+            const startY = i * partHeight;
+            const currentHeight = (i === 3) ? height - startY : partHeight;
+
+            canvas.width = width;
+            canvas.height = currentHeight;
+
+            ctx.drawImage(
+                img,
+                0, startY, width, currentHeight,
+                0, 0, width, currentHeight
+            );
+
+            const dataUrl = canvas.toDataURL('image/png');
+            splitImageDataUrls.push(dataUrl);
+
+            const card = document.createElement('div');
+            card.className = 'split-image-card';
+
+            const preview = document.createElement('img');
+            preview.src = dataUrl;
+            preview.alt = `分割画像 ${i + 1}`;
+
+            const label = document.createElement('span');
+            label.textContent = `パート ${i + 1}`;
+
+            const btn = document.createElement('button');
+            btn.className = 'download-btn';
+            btn.textContent = 'ダウンロード';
+            btn.addEventListener('click', () => downloadImage(dataUrl, `split_${i + 1}.png`));
+
+            card.appendChild(preview);
+            card.appendChild(label);
+            card.appendChild(btn);
+            splitImages.appendChild(card);
+        }
+
+        resultSection.style.display = 'block';
+    }
+
+    // 画像ダウンロード
+    function downloadImage(dataUrl, filename) {
+        // Data URLをBlobに変換
+        const byteString = atob(dataUrl.split(',')[1]);
+        const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        
+        // Blob URLを作成してダウンロード
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        
+        // ブラウザがファイルを取得する時間を確保してからメモリ解放
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        }, 150);
+    }
+
+    // 全画像ダウンロード
+    downloadAllBtn.addEventListener('click', () => {
+        splitImageDataUrls.forEach((dataUrl, index) => {
+            setTimeout(() => {
+                downloadImage(dataUrl, `split_${index + 1}.png`);
+            }, index * 200);
+        });
+    });
+});
