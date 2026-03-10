@@ -40,13 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
+        if (e.target.files.length > 0 && e.target.files[0].type.startsWith('image/')) {
             handleFile(e.target.files[0]);
         }
     });
 
     // ファイル処理
+    const MAX_FILE_SIZE_MB = 50;
     function handleFile(file) {
+        if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+            alert(`ファイルサイズが大きすぎます。${MAX_FILE_SIZE_MB}MB以下の画像を選択してください。`);
+            return;
+        }
         const reader = new FileReader();
         reader.onload = (e) => {
             // 新しいImageオブジェクトを作成して読み込みを確実に
@@ -140,11 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(link);
         link.click();
 
-        // ブラウザがファイルを取得する時間を確保してからメモリ解放
-        setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(blobUrl);
-        }, 150);
+        link.addEventListener('click', () => {
+            requestAnimationFrame(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+            });
+        });
     }
 
     // 全画像ダウンロード
